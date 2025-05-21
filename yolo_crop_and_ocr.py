@@ -4,6 +4,7 @@ from pathlib import Path
 from ultralytics import YOLO
 from donut_ocr import img2json
 from docgeonet_correct import correct_with_docgeonet
+from setup_docgeonet import main as setup_docgeonet
 
 # ------------- Parametreler -------------
 YOLO_MODEL_PATH   = "best.pt"
@@ -14,6 +15,7 @@ REC_DIR           = "rectified"   # DocGeoNet'ten çıkan düzeltmeler
 DOCGEONET_DIR     = "DocGeoNet"
 CONF_THRESHOLD    = 0.20
 IMGSZ             = 640
+
 
 # Klasörleri oluştur
 os.makedirs(CROP_DIR, exist_ok=True)
