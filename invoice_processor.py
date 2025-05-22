@@ -16,13 +16,17 @@ import traceback
 class InvoiceProcessor:
     def __init__(self, yolo_model_path="best.pt", device=None):
         self.YOLO_MODEL_PATH = yolo_model_path
-        self.CROP_DIR = "cropped"
-        self.REC_DIR = "rectified"
         self.DOCGEONET_DIR = "DocGeoNet"
         self.CONF_THRESHOLD = 0.20
         self.IMGSZ = 640
 
-        # Klasörlerin varlığını kontrol et
+        # Always use temporary directories for processing
+        self.use_temp_dirs = True
+
+        # Create temporary directories that will be cleaned up after processing
+        self.temp_base_dir = tempfile.mkdtemp(prefix="invoice_processor_")
+        self.CROP_DIR = os.path.join(self.temp_base_dir, "cropped")
+        self.REC_DIR = os.path.join(self.temp_base_dir, "rectified")
         os.makedirs(self.CROP_DIR, exist_ok=True)
         os.makedirs(self.REC_DIR, exist_ok=True)
 
@@ -31,8 +35,37 @@ class InvoiceProcessor:
         self.device = device if device else ('cuda' if self.yolo_model.device.type == 'cuda' else 'cpu')
         print(f"YOLOv8 yüklendi: {self.YOLO_MODEL_PATH} | Cihaz: {self.device}")
 
+    def __del__(self):
+        """Destructor to ensure temporary directories are cleaned up when object is destroyed"""
+        if hasattr(self, 'use_temp_dirs') and self.use_temp_dirs and hasattr(self, 'temp_base_dir'):
+            if os.path.exists(self.temp_base_dir):
+                try:
+                    import shutil
+                    shutil.rmtree(self.temp_base_dir)
+                    print(f"Temporary directory cleaned up in destructor: {self.temp_base_dir}")
+                except Exception as e:
+                    print(f"Error cleaning up temporary directory in destructor: {str(e)}")
+
     def clamp(self, v, lo, hi):
         return max(lo, min(v, hi))
+
+    def cleanup_temp_dirs(self):
+        """Clean up temporary directories if they exist"""
+        if hasattr(self, 'use_temp_dirs') and self.use_temp_dirs and hasattr(self, 'temp_base_dir'):
+            if os.path.exists(self.temp_base_dir):
+                try:
+                    import shutil
+                    shutil.rmtree(self.temp_base_dir)
+                    print(f"Temporary directory cleaned up: {self.temp_base_dir}")
+                except Exception as e:
+                    print(f"Error cleaning up temporary directory: {str(e)}")
+
+            # Create new temporary directories for next processing
+            self.temp_base_dir = tempfile.mkdtemp(prefix="invoice_processor_")
+            self.CROP_DIR = os.path.join(self.temp_base_dir, "cropped")
+            self.REC_DIR = os.path.join(self.temp_base_dir, "rectified")
+            os.makedirs(self.CROP_DIR, exist_ok=True)
+            os.makedirs(self.REC_DIR, exist_ok=True)
 
     def crop_invoices_from_img(self, img_path):
         """Fatura görüntüsünü kırp"""
@@ -85,6 +118,9 @@ class InvoiceProcessor:
             # 1. Faturayı tespit et ve kırp
             crop_paths, invoice_count = self.crop_invoices_from_img(image_path)
             if not crop_paths:
+                # Clean up temporary directories before returning
+                if hasattr(self, 'use_temp_dirs') and self.use_temp_dirs:
+                    self.cleanup_temp_dirs()
                 return {
                     "status": "warning", 
                     "message": "Fatura tespit edilemedi", 
@@ -142,7 +178,8 @@ class InvoiceProcessor:
             elif success_count > 0 and error_count > 0:
                 status = "partial_success"
 
-            return {
+            # Prepare result
+            result = {
                 "status": status,
                 "message": f"{invoice_count} fatura tespit edildi, {success_count} başarılı, {error_count} hatalı",
                 "process_id": process_id,
@@ -154,9 +191,20 @@ class InvoiceProcessor:
                 "results": results
             }
 
+            # Clean up temporary directories after processing
+            if hasattr(self, 'use_temp_dirs') and self.use_temp_dirs:
+                self.cleanup_temp_dirs()
+
+            return result
+
         except Exception as e:
             error_details = traceback.format_exc()
             print(f"İşleme hatası: {str(e)}\n{error_details}")
+
+            # Clean up temporary directories even if an error occurs
+            if hasattr(self, 'use_temp_dirs') and self.use_temp_dirs:
+                self.cleanup_temp_dirs()
+
             return {
                 "status": "error",
                 "message": f"İşleme hatası: {str(e)}",
@@ -218,6 +266,11 @@ class InvoiceProcessor:
         except Exception as e:
             error_details = traceback.format_exc()
             print(f"Byte işleme hatası: {str(e)}\n{error_details}")
+
+            # Clean up temporary directories even if an error occurs
+            if hasattr(self, 'use_temp_dirs') and self.use_temp_dirs:
+                self.cleanup_temp_dirs()
+
             return {
                 "status": "error",
                 "message": f"Byte işleme hatası: {str(e)}",
@@ -254,6 +307,9 @@ class InvoiceProcessor:
             try:
                 image_bytes = base64.b64decode(base64_string)
             except Exception as decode_error:
+                # Clean up temporary directories if an error occurs
+                if hasattr(self, 'use_temp_dirs') and self.use_temp_dirs:
+                    self.cleanup_temp_dirs()
                 return {
                     "status": "error",
                     "message": f"Base64 decode hatası: {str(decode_error)}",
@@ -271,6 +327,9 @@ class InvoiceProcessor:
                 if filename is None:
                     filename = f"upload_{timestamp}.{img.format.lower() if img.format else 'jpg'}"
             except Exception as img_error:
+                # Clean up temporary directories if an error occurs
+                if hasattr(self, 'use_temp_dirs') and self.use_temp_dirs:
+                    self.cleanup_temp_dirs()
                 return {
                     "status": "error",
                     "message": f"Geçersiz görüntü formatı: {str(img_error)}",
@@ -291,6 +350,11 @@ class InvoiceProcessor:
         except Exception as e:
             error_details = traceback.format_exc()
             print(f"Base64 işleme hatası: {str(e)}\n{error_details}")
+
+            # Clean up temporary directories if an error occurs
+            if hasattr(self, 'use_temp_dirs') and self.use_temp_dirs:
+                self.cleanup_temp_dirs()
+
             return {
                 "status": "error",
                 "message": f"Base64 işleme hatası: {str(e)}",
