@@ -94,20 +94,33 @@ class InvoiceProcessor:
         try:
             # Girdi doğrulama
             if not image_path or not isinstance(image_path, str):
+                timestamp = int(time.time())
+                process_id = f"process_{timestamp}_invalid_path"
                 return {
                     "status": "error",
                     "message": "Geçersiz görüntü yolu",
                     "error_details": "image_path parametresi geçerli bir string olmalıdır",
-                    "timestamp": int(time.time()),
+                    "timestamp": timestamp,
+                    "process_id": process_id,
+                    "invoice_count": 0,
+                    "success_count": 0,
+                    "error_count": 0,
                     "results": []
                 }
 
             if not os.path.exists(image_path):
+                timestamp = int(time.time())
+                process_id = f"process_{timestamp}_file_not_found"
                 return {
                     "status": "error",
                     "message": f"Dosya bulunamadı: {image_path}",
                     "error_details": "Belirtilen dosya sistemde bulunamadı",
-                    "timestamp": int(time.time()),
+                    "timestamp": timestamp,
+                    "process_id": process_id,
+                    "input_image": image_path,
+                    "invoice_count": 0,
+                    "success_count": 0,
+                    "error_count": 0,
                     "results": []
                 }
 
@@ -205,12 +218,18 @@ class InvoiceProcessor:
             if hasattr(self, 'use_temp_dirs') and self.use_temp_dirs:
                 self.cleanup_temp_dirs()
 
+            timestamp = int(time.time())
+            process_id = f"process_{timestamp}_{hash(str(e)) % 10000}"
             return {
                 "status": "error",
                 "message": f"İşleme hatası: {str(e)}",
                 "error_details": error_details,
-                "timestamp": int(time.time()),
+                "timestamp": timestamp,
+                "process_id": process_id,
                 "input_image": image_path if 'image_path' in locals() else None,
+                "invoice_count": 0,
+                "success_count": 0,
+                "error_count": 0,
                 "results": []
             }
 
@@ -227,6 +246,10 @@ class InvoiceProcessor:
                 "error_details": "image_bytes parametresi boş olamaz",
                 "timestamp": timestamp,
                 "process_id": process_id,
+                "invoice_count": 0,
+                "success_count": 0,
+                "error_count": 0,
+                "source_type": "bytes",
                 "results": []
             }
 
@@ -278,6 +301,9 @@ class InvoiceProcessor:
                 "timestamp": timestamp,
                 "process_id": process_id,
                 "source_type": "bytes",
+                "invoice_count": 0,
+                "success_count": 0,
+                "error_count": 0,
                 "results": []
             }
 
@@ -295,6 +321,9 @@ class InvoiceProcessor:
                 "timestamp": timestamp,
                 "process_id": process_id,
                 "source_type": "base64",
+                "invoice_count": 0,
+                "success_count": 0,
+                "error_count": 0,
                 "results": []
             }
 
@@ -317,6 +346,9 @@ class InvoiceProcessor:
                     "timestamp": timestamp,
                     "process_id": process_id,
                     "source_type": "base64",
+                    "invoice_count": 0,
+                    "success_count": 0,
+                    "error_count": 0,
                     "results": []
                 }
 
@@ -337,6 +369,9 @@ class InvoiceProcessor:
                     "timestamp": timestamp,
                     "process_id": process_id,
                     "source_type": "base64",
+                    "invoice_count": 0,
+                    "success_count": 0,
+                    "error_count": 0,
                     "results": []
                 }
 
@@ -362,6 +397,9 @@ class InvoiceProcessor:
                 "timestamp": timestamp,
                 "process_id": process_id,
                 "source_type": "base64",
+                "invoice_count": 0,
+                "success_count": 0,
+                "error_count": 0,
                 "results": []
             }
 

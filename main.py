@@ -59,27 +59,28 @@ async def root():
 # Process file endpoint
 @app.post("/api/process-file", response_model=ProcessingResponse)
 async def process_file(file: UploadFile = File(...)):
+    temp_path = None
     try:
         # Create a temporary file
         timestamp = int(time.time())
         filename = f"upload_{timestamp}_{file.filename}"
         temp_path = os.path.join(os.getcwd(), filename)
-        
+
         # Save the uploaded file
         with open(temp_path, "wb") as f:
             content = await file.read()
             f.write(content)
-        
+
         # Process the image
         result = processor.process_image(temp_path)
-        
+
         # Clean up the temporary file
         if os.path.exists(temp_path):
             os.remove(temp_path)
-        
+
         return result
     except Exception as e:
-        if os.path.exists(temp_path):
+        if temp_path and os.path.exists(temp_path):
             os.remove(temp_path)
         raise HTTPException(status_code=500, detail=str(e))
 
