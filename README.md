@@ -151,10 +151,22 @@ Projeyi geliştirmek için aşağıdaki paketlere ihtiyacınız vardır:
 
 ### Docker ile Çalıştırma
 
+Docker ile çalıştırma hakkında detaylı bilgi için [DockerReadme.md](DockerReadme.md) dosyasına bakınız.
+
 ```bash
 # Docker imajı oluştur
 docker build -t invoice-processor-api .
 
 # Docker konteynerini çalıştır
-docker run -p 8000:8000 invoice-processor-api
+docker run -p 8000:8000 -v ./test_images:/app/test_images invoice-processor-api
+```
+
+Alternatif olarak, Docker Compose ile çalıştırmak için:
+
+```bash
+# Docker Compose ile başlat
+docker-compose up
+
+# Arka planda çalıştırmak için
+docker-compose up -d
 ```
