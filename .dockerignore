@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.env
+.venv/
+venv/
+ENV/
+.python-version
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+.dockerignore
+docker-compose*.yml
+Dockerfile*
+DockerReadme.md
+
+# Project specific
+test_images/
+upload_*
+*.log
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Documentation
+README.md
+LICENSE
+docs/
+
+# Don't ignore these files that are needed for the application
+!best.pt
+!cropped/
+!rectified/
+!DocGeoNet/
+!donut_cord_v2/
+!hf_docgeonet/

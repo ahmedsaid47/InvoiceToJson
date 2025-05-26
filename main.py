@@ -7,7 +7,24 @@ import base64
 from typing import Optional
 import os
 import time
+import logging
+import traceback
 from invoice_processor import InvoiceProcessor
+
+# Import the centralized safe globals module
+from torch_safe_globals import register_safe_globals
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("main_api")
+
+# Register safe globals before loading any models
+# This is automatically done when importing the module, but we call it again to be sure
+register_safe_globals()
+logger.info("PyTorch safe globals registered")
 
 # Initialize the FastAPI app
 app = FastAPI(

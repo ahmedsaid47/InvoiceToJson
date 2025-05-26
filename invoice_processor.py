@@ -4,6 +4,7 @@ import json
 import tempfile
 import base64
 import io
+import logging
 from pathlib import Path
 from PIL import Image
 from ultralytics import YOLO
@@ -11,6 +12,16 @@ from donut_ocr import img2json
 from docgeonet_correct import correct_with_docgeonet
 import time
 import traceback
+
+# Import the centralized safe globals module
+from torch_safe_globals import register_safe_globals, SAFE_GLOBALS
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("invoice_processor")
 
 
 class InvoiceProcessor:
@@ -30,10 +41,22 @@ class InvoiceProcessor:
         os.makedirs(self.CROP_DIR, exist_ok=True)
         os.makedirs(self.REC_DIR, exist_ok=True)
 
-        # YOLOv8 modelini yükle
-        self.yolo_model = YOLO(self.YOLO_MODEL_PATH)
-        self.device = device if device else ('cuda' if self.yolo_model.device.type == 'cuda' else 'cpu')
-        print(f"YOLOv8 yüklendi: {self.YOLO_MODEL_PATH} | Cihaz: {self.device}")
+        # Register safe globals before loading the YOLO model
+        # This is now handled by the centralized module, but we call it again to be sure
+        register_safe_globals()
+
+        # Log initialization information
+        logger.info(f"Initializing InvoiceProcessor with model: {self.YOLO_MODEL_PATH}")
+
+        try:
+            # YOLOv8 modelini yükle
+            self.yolo_model = YOLO(self.YOLO_MODEL_PATH)
+            self.device = device if device else ('cuda' if self.yolo_model.device.type == 'cuda' else 'cpu')
+            logger.info(f"YOLOv8 loaded: {self.YOLO_MODEL_PATH} | Device: {self.device}")
+        except Exception as e:
+            logger.error(f"Failed to load YOLO model: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise
 
     def __del__(self):
         """Destructor to ensure temporary directories are cleaned up when object is destroyed"""

@@ -5,18 +5,42 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: invoice-processor-api
+    image: invoice-processor-api:latest
     container_name: invoice-processor
     ports:
       - "8000:8000"
     volumes:
-      - ./test_images:/app/test_images
+      - ./test_images:/app/test_images:ro
+      - invoice_data:/app/.torch
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+      - LOG_LEVEL=INFO
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+    security_opt:
+      - no-new-privileges:true
+    # Drop all capabilities and only add the ones we need
+    cap_drop:
+      - ALL
+    # Read-only root filesystem for extra security
+    read_only: true
+    # Create temporary directories for runtime files
+    tmpfs:
+      - /tmp
+      - /var/tmp
+
+volumes:
+  invoice_data:
+    driver: local
