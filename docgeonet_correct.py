@@ -28,8 +28,10 @@ def correct_with_docgeonet(docgeonet_dir, crops_dir, rec_dir):
     unique_suffix = f"{timestamp}_{thread_id}_{thread_local.counter}"
     
     docgeonet_dir = Path(docgeonet_dir).resolve()  # mutlak yol
-    DG_DIST = docgeonet_dir / f"distorted_{unique_suffix}"
-    DG_REC = docgeonet_dir / f"rec_{unique_suffix}"
+    # Use /tmp directory for temporary files instead of the read-only /app directory
+    tmp_dir = Path("/tmp")
+    DG_DIST = tmp_dir / f"distorted_{unique_suffix}"
+    DG_REC = tmp_dir / f"rec_{unique_suffix}"
 
     try:
         # 1) Klasör oluştur (temizleme yerine benzersiz klasörler kullan)

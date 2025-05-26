@@ -14,4 +14,3 @@ sentencepiece>=0.1.99
 requests>=2.31.0
 tqdm>=4.66.1
 pyyaml>=6.0.1
-torch-safe-globals==0.1.5

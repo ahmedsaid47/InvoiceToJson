@@ -24,8 +24,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir "torch>=2.2,<3" && \
-    pip install --no-cache-dir protobuf sentencepiece && \
-    pip install --no-cache-dir torch-safe-globals==0.1.5
+    pip install --no-cache-dir protobuf sentencepiece
 
 # PyTorch sürümünü kontrol et
 RUN python -c "import torch, sys; assert torch.__version__ >= '2.2.0', f'PyTorch {torch.__version__} < 2.2.0'; print('PyTorch version:', torch.__version__)"
@@ -54,7 +53,7 @@ RUN mkdir -p cropped rectified test_images && \
     chown -R appuser:appuser /app
 
 # Uygulama kodunu kopyala
-COPY --chown=appuser:appuser main.py invoice_processor.py donut_ocr.py docgeonet_correct.py yolo_crop_and_ocr.py ./
+COPY --chown=appuser:appuser main.py invoice_processor.py donut_ocr.py docgeonet_correct.py yolo_crop_and_ocr.py torch_safe_globals.py ./
 COPY --chown=appuser:appuser best.pt ./
 
 # Model klasörleri

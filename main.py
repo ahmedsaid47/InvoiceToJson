@@ -78,10 +78,10 @@ async def root():
 async def process_file(file: UploadFile = File(...)):
     temp_path = None
     try:
-        # Create a temporary file
+        # Create a temporary file in /tmp directory (writable)
         timestamp = int(time.time())
         filename = f"upload_{timestamp}_{file.filename}"
-        temp_path = os.path.join(os.getcwd(), filename)
+        temp_path = os.path.join("/tmp", filename)
 
         # Save the uploaded file
         with open(temp_path, "wb") as f:
