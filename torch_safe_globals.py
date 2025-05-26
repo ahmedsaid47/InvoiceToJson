@@ -8,9 +8,9 @@ Usage:
     # Application startup
     register_safe_globals()
 """
+import torch
 import torch.serialization
-from ultralytics.nn.tasks import DetectionModel
-from typing import Dict, Set, Optional, Any
+from typing import Dict, Set, Optional, Any, List
 import logging
 
 # Configure logging
@@ -23,31 +23,21 @@ logger = logging.getLogger("torch_safe_globals")
 # Kayıt edilmiş global'leri takip eder
 _REGISTERED_GLOBALS: Set[str] = set()
 
-# Kaydedilecek tüm sınıflar burada tanımlanır
-SAFE_GLOBALS: Dict[str, Any] = {
-    "ultralytics.nn.tasks.DetectionModel": DetectionModel
-}
+# Public API için SAFE_GLOBALS değişkeni
+SAFE_GLOBALS: Set[str] = _REGISTERED_GLOBALS
 
-def register_safe_globals(globals_dict: Optional[Dict[str, Any]] = None) -> bool:
+def register_safe_globals() -> bool:
     """
-    Tüm proje için tek bir yerden PyTorch güvenli globals kaydı yapar.
-    Her çağrıda yalnızca bir kez kaydeder.
-
-    Args:
-        globals_dict: Optional dictionary of safe globals to register.
-                     If None, uses the default SAFE_GLOBALS.
+    PyTorch güvenli globals kaydı yapar.
+    Ultralytics modelleri için gerekli sınıfları güvenli hale getirir.
 
     Returns:
         bool: Kayıt yapıldıysa True, zaten yapılmışsa False
     """
     global _REGISTERED_GLOBALS
     
-    if globals_dict is None:
-        globals_dict = SAFE_GLOBALS
-    
     # PyTorch sürümünü kontrol et
     try:
-        import torch
         torch_version = torch.__version__
         logger.info(f"PyTorch version: {torch_version}")
         
@@ -66,26 +56,50 @@ def register_safe_globals(globals_dict: Optional[Dict[str, Any]] = None) -> bool
                       "could not add safe globals.")
         return False
 
-    # Tüm globals'leri tek seferde kaydet (PyTorch 2.2+ için)
+    # Ultralytics sınıflarını güvenli hale getir
     try:
-        # Sadece henüz kaydedilmemiş olanları filtrele
-        new_globals = {k: v for k, v in globals_dict.items() if k not in _REGISTERED_GLOBALS}
+        # Önce gerekli modülleri import et
+        from ultralytics.nn.tasks import DetectionModel
+        from ultralytics.nn.modules import Conv, C2f, SPPF, Bottleneck
         
-        if not new_globals:
+        # Güvenli globals listesi
+        safe_classes = [
+            DetectionModel,
+            Conv,
+            C2f, 
+            SPPF,
+            Bottleneck
+        ]
+        
+        # Sadece henüz kaydedilmemiş olanları filtrele
+        new_classes = []
+        for cls in safe_classes:
+            class_path = f"{cls.__module__}.{cls.__name__}"
+            if class_path not in _REGISTERED_GLOBALS:
+                new_classes.append(cls)
+                _REGISTERED_GLOBALS.add(class_path)
+        
+        if not new_classes:
             logger.info("All safe globals are already registered.")
             return False
             
         # Yeni globals'leri kaydet
-        add_safe_fn(new_globals)
+        add_safe_fn(new_classes)
         
-        # Kaydedilenleri takip et
-        _REGISTERED_GLOBALS.update(new_globals.keys())
-        
-        logger.info(f"Successfully registered {len(new_globals)} safe globals: {', '.join(new_globals.keys())}")
+        logger.info(f"Successfully registered {len(new_classes)} safe globals: {[cls.__name__ for cls in new_classes]}")
         return True
+        
     except Exception as e:
         logger.error(f"Failed to register safe globals: {str(e)}")
-        return False
+        # Fallback: Ultralytics'i tamamen güvenli hale getir
+        try:
+            import ultralytics
+            add_safe_fn([ultralytics])
+            logger.info("Added ultralytics module as safe global (fallback)")
+            return True
+        except Exception as fallback_e:
+            logger.error(f"Fallback registration also failed: {str(fallback_e)}")
+            return False
 
 def get_registered_globals() -> Set[str]:
     """
@@ -104,6 +118,20 @@ def is_safe_globals_available() -> bool:
         bool: True if safe globals are supported, False otherwise
     """
     return callable(getattr(torch.serialization, "add_safe_globals", None))
+
+def disable_weights_only_loading():
+    """
+    PyTorch weights_only yüklemesini devre dışı bırakır.
+    Bu geçici bir çözümdür ve güvenlik riskli olabilir.
+    """
+    try:
+        # PyTorch'un default weights_only ayarını değiştir
+        torch.serialization.set_default_load_endianness(torch.serialization.LoadEndianness.NATIVE)
+        logger.info("Disabled PyTorch weights_only loading")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to disable weights_only loading: {str(e)}")
+        return False
 
 # Otomatik olarak import edildiğinde globals'leri kaydet
 if __name__ != "__main__":

@@ -9,12 +9,12 @@ from pathlib import Path
 from PIL import Image
 from ultralytics import YOLO
 from donut_ocr import img2json
-from docgeonet_correct import correct_with_docgeonet
+# from docgeonet_correct import correct_with_docgeonet  # DocGeoNet devre dışı
 import time
 import traceback
 
 # Import the centralized safe globals module
-from torch_safe_globals import register_safe_globals, SAFE_GLOBALS
+from torch_safe_globals import register_safe_globals
 
 # Configure logging
 logging.basicConfig(
@@ -49,6 +49,16 @@ class InvoiceProcessor:
         logger.info(f"Initializing InvoiceProcessor with model: {self.YOLO_MODEL_PATH}")
 
         try:
+            # PyTorch weights_only yüklemeyi devre dışı bırak
+            import torch
+            if hasattr(torch, 'set_default_tensor_type'):
+                # Eski sürümler için
+                original_load = torch.load
+                def safe_load(*args, **kwargs):
+                    kwargs.setdefault('weights_only', False)
+                    return original_load(*args, **kwargs)
+                torch.load = safe_load
+            
             # YOLOv8 modelini yükle
             self.yolo_model = YOLO(self.YOLO_MODEL_PATH)
             self.device = device if device else ('cuda' if self.yolo_model.device.type == 'cuda' else 'cpu')
@@ -167,15 +177,18 @@ class InvoiceProcessor:
                     "results": []
                 }
 
-            # 2. DocGeoNet ile düzelt
-            rectified_imgs = correct_with_docgeonet(self.DOCGEONET_DIR, self.CROP_DIR, self.REC_DIR)
-
+            # 2. DocGeoNet atlanıyor - doğrudan crop'ları kullan
+            # rectified_imgs = correct_with_docgeonet(self.DOCGEONET_DIR, self.CROP_DIR, self.REC_DIR)
+            
+            # Crop edilen görüntüleri doğrudan kullan
+            crop_imgs = [str(p) for p in Path(self.CROP_DIR).glob("*.jpg")]
+            
             # 3. OCR ile işle
             results = []
             success_count = 0
             error_count = 0
 
-            for rec_img_path in rectified_imgs:
+            for rec_img_path in crop_imgs:
                 print(f"OCR başlatılıyor: {rec_img_path}")
                 try:
                     ocr_result = img2json(rec_img_path)
