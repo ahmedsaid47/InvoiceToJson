@@ -9,12 +9,35 @@ Bu proje, fatura görüntülerini işleyerek JSON formatında veri çıktısı �
 3. **Donut OCR**: Düzeltilmiş görüntülerden metin çıkarır ve JSON formatına dönüştürür
 4. **FastAPI**: RESTful API sunmak için kullanılan modern, hızlı web framework
 
+### Model Dosyalari
+Bu repoda YOLOv8 icin **best.pt** agirligi ve Donut OCR modeli iceren `donut_cord_v2` klasoru yer alir. Eger farkli bir model kullanmak isterseniz `invoice_processor.py` icindeki `YOLO_MODEL_PATH` degiskenini guncelleyebilirsiniz.
+
 ## Kurulum
 
+1. Depoyu klonlayin ve dizine gecin:
 ```bash
-# Gerekli paketleri yükle
+git clone <repository-url>
+cd InvoiceToJson
+```
+
+2. Opsiyonel olarak bir sanal ortam olusturun:
+```bash
+python -m venv venv
+source venv/bin/activate  # Windows icin venv\Scripts\activate
+```
+
+3. Gerekli paketleri kurun:
+```bash
 pip install -r requirements.txt
 ```
+
+## Proje Yapisi
+- `main.py`: FastAPI sunucusu
+- `invoice_processor.py`: isleme pipeline
+- `best.pt` ve `donut_cord_v2/`: model dosyalari
+- `test_api.py`: ornek testler
+- `test_images/`: ornek resimler
+- `Dockerfile`, `docker-compose.yml`: Docker destek dosyalari
 
 ## API Kullanımı
 
