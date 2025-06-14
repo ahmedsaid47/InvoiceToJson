@@ -8,7 +8,10 @@ import logging
 from pathlib import Path
 from PIL import Image
 from ultralytics import YOLO
+# OCR module
 from donut_ocr import img2json
+# NER module for post-processing OCR text
+from ner_processor import NERProcessor
 # from docgeonet_correct import correct_with_docgeonet  # DocGeoNet devre dışı
 import time
 import traceback
@@ -63,7 +66,10 @@ class InvoiceProcessor:
             self.yolo_model = YOLO(self.YOLO_MODEL_PATH)
             self.device = device if device else ('cuda' if self.yolo_model.device.type == 'cuda' else 'cpu')
             logger.info(f"YOLOv8 loaded: {self.YOLO_MODEL_PATH} | Device: {self.device}")
-        except Exception as e:
+
+            # Initialize NER processor
+            self.ner_processor = NERProcessor(device=self.device)
+       except Exception as e:
             logger.error(f"Failed to load YOLO model: {str(e)}")
             logger.error(traceback.format_exc())
             raise
@@ -196,18 +202,27 @@ class InvoiceProcessor:
                     try:
                         # Eğer string JSON formatında ise, parse et
                         parsed_json = json.loads(ocr_result) if isinstance(ocr_result, str) else ocr_result
+                        # Metni NER için hazırla
+                        if isinstance(parsed_json, dict):
+                            text_for_ner = " ".join(str(v) for v in parsed_json.values())
+                        else:
+                            text_for_ner = str(parsed_json)
+                        entities = self.ner_processor.extract(text_for_ner)
                         results.append({
                             "image_path": rec_img_path,
                             "status": "success",
-                            "ocr_data": parsed_json
+                            "ocr_data": parsed_json,
+                            "entities": entities
                         })
                         success_count += 1
                     except json.JSONDecodeError:
                         # JSON formatında değilse, düz metin olarak ekle
+                        entities = self.ner_processor.extract(str(ocr_result))
                         results.append({
                             "image_path": rec_img_path,
                             "status": "partial_success",
-                            "ocr_text": ocr_result
+                            "ocr_text": ocr_result,
+                            "entities": entities
                         })
                         success_count += 1
                 except Exception as e:
