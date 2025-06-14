@@ -62,10 +62,11 @@ Bu proje, modern yapay zeka teknolojilerini kullanarak fatura işleme süreçler
 - Çoklu fatura içeren belgelerin ayrıştırılması ihtiyacı
 
 **Çözüm Yaklaşımı:**
-Sistem, üç aşamalı bir AI pipeline kullanarak problemleri çözer:
+Sistem, dört aşamalı bir AI pipeline kullanarak problemleri çözer:
 1. **Tespit Aşaması**: YOLOv8 ile fatura bölgelerinin otomatik tespiti
-2. **Düzeltme Aşaması**: DocGeoNet ile geometrik bozuklukların giderilmesi  
-3. **Çıkarım Aşaması**: Donut OCR ile metin ve yapısal veri çıkarımı
+2. **Düzeltme Aşaması**: DocGeoNet ile geometrik bozuklukların giderilmesi
+3. **OCR Aşaması**: Donut OCR ile metin ve yapısal veri çıkarımı
+4. **Varlık Tanıma Aşaması**: NER modeli ile isim, kurum gibi varlıkların tespiti
 
 ### 1.3. Projenin Kapsamı ve Hedefleri
 
@@ -98,10 +99,10 @@ Sistem, üç aşamalı bir AI pipeline kullanarak problemleri çözer:
                               │
 ┌─────────────────────────────────────────────────────────────┐
 │                  AI MODEL KATMANI                           │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
-│  │  YOLOv8     │→ │ DocGeoNet   │→ │ Donut OCR (CORD)    │ │
-│  │ (Detection) │  │ (Geometric) │  │ (Text Extraction)   │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  ┌───────────┐ │
+│  │  YOLOv8     │→ │ DocGeoNet   │→ │ Donut OCR (CORD)    │→ │   NER     │ │
+│  │ (Detection) │  │ (Geometric) │  │ (Text Extraction)   │  │ Extraction│ │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  └───────────┘ │
 └─────────────────────────────────────────────────────────────┘
                               │
 ┌─────────────────────────────────────────────────────────────┐
@@ -188,6 +189,19 @@ Training Dataset: CORD (Consolidated Receipt Dataset)
 }
 ```
 
+#### 2.2.4. NER - Varlık Tanıma Modeli
+```python
+# Model Özellikleri:
+Model Boyutu: 416MB (model.safetensors)
+Model Adı: akdeniz27/bert-base-turkish-cased-ner
+Pipeline: token-classification (aggregation_strategy="simple")
+```
+
+**Fonksiyonalite:**
+- OCR çıktısından isim, kurum ve tarih gibi varlıkların tespiti
+- Türkçe diline özel fine-tune edilmiş BERT modeli
+- JSON çıktısını zenginleştirerek veri bütünlüğü sağlar
+
 ### 2.3. API Tasarımı ve Web Framework
 
 #### 2.3.1. FastAPI Framework
@@ -243,9 +257,10 @@ graph TD
     C --> D[Image Cropping]
     D --> E[DocGeoNet Correction]
     E --> F[Donut OCR Processing]
-    F --> G[JSON Output Generation]
-    G --> H[Response Formatting]
-    H --> I[Cleanup & Logging]
+    F --> G[NER Extraction]
+    G --> H[JSON Output Generation]
+    H --> I[Response Formatting]
+    I --> J[Cleanup & Logging]
 ```
 
 #### 2.4.2. Veri Akış Detayları
@@ -293,6 +308,11 @@ output_ids = model.generate(
 )
 json_output = processor.batch_decode(output_ids)
 ```
+
+**6. NER Katmanı:**
+- HuggingFace token-classification modeli ile varlık çıkarımı
+- İsim, firma ve tarih gibi alanların tanınması
+- OCR çıktısının zenginleştirilmesi ve JSON'a eklenmesi
 
 #### 2.4.3. Memory Management
 - Temporary directory creation per request
@@ -361,6 +381,7 @@ services:
 **Tamamlanan Bileşenler:**
 - YOLOv8 fatura tespit sistemi fully operational
 - Donut OCR entegrasyonu ve JSON çıkarımı active
+- NER entegrasyonu ile varlık tanıma
 - Multi-invoice processing capability implemented
 - Error handling ve logging system complete
 
@@ -665,7 +686,7 @@ Total peak usage: 3-4GB
 
 #### 5.1.1. Teknik Başarılar
 **AI Pipeline Achievement:**
-- ✅ Üç farklı AI modelinin başarılı entegrasyonu
+- ✅ Dört farklı AI modelinin (YOLOv8, DocGeoNet, Donut OCR, NER) başarılı entegrasyonu
 - ✅ End-to-end automated invoice processing
 - ✅ Real-time JSON output generation
 - ✅ Multi-invoice detection capability
