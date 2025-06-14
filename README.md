@@ -7,7 +7,8 @@ Bu proje, fatura görüntülerini işleyerek JSON formatında veri çıktısı �
 1. **YOLOv8 Modeli**: Görüntülerden faturaları tespit eder ve kırpar
 2. **DocGeoNet**: Kırpılmış fatura görüntülerini düzeltir (eğik, bükülmüş vb. görüntüleri düzleştirir)
 3. **Donut OCR**: Düzeltilmiş görüntülerden metin çıkarır ve JSON formatına dönüştürür
-4. **FastAPI**: RESTful API sunmak için kullanılan modern, hızlı web framework
+4. **NER Modeli**: OCR çıktısından fatura ile ilgili varlıkları tespit eder
+5. **FastAPI**: RESTful API sunmak için kullanılan modern, hızlı web framework
 
 ### Model Dosyalari
 Bu repoda YOLOv8 icin **best.pt** agirligi ve Donut OCR modeli iceren `donut_cord_v2` klasoru yer alir. Eger farkli bir model kullanmak isterseniz `invoice_processor.py` icindeki `YOLO_MODEL_PATH` degiskenini guncelleyebilirsiniz.
@@ -34,6 +35,7 @@ pip install -r requirements.txt
 ## Proje Yapisi
 - `main.py`: FastAPI sunucusu
 - `invoice_processor.py`: isleme pipeline
+- `ner_processor.py`: OCR çıktısını analiz eden NER modülü
 - `best.pt` ve `donut_cord_v2/`: model dosyalari
 - `test_api.py`: ornek testler
 - `test_images/`: ornek resimler
@@ -127,7 +129,8 @@ Tüm API endpointleri aşağıdaki formatta yanıt döndürür:
     {
       "image_path": "islenmis_goruntu_yolu",
       "status": "success",
-      "ocr_data": { ... }  // JSON formatında OCR sonuçları
+      "ocr_data": { ... },  // JSON formatında OCR sonuçları
+      "entities": [ ... ]   // NER ile tespit edilen varlıklar
     }
   ]
 }
